@@ -42,7 +42,7 @@ else:
     for topic in scan_list:
         st.header(f"📡 Live Stream: {topic}")
         
-        encoded_term = urllib.parse.quote(topic)
+        encoded_term = urllib.parse.quote_plus(topic)
         google_news_url = f"https://google.com{encoded_term}&hl=en-US&gl=US&ceid=US:en"
         
         feed = feedparser.parse(google_news_url)
