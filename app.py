@@ -1,39 +1,69 @@
-File "/usr/local/lib/python3.14/http/client.py", line 971, in _get_hostport
-    port = int(host[i+1:])
-ValueError
-During handling of the above exception, another exception occurred:
-File "/mount/src/my-news-dashboard/app.py", line 48, in <module>
-    feed = feedparser.parse(google_news_url)
-File "/home/adminuser/venv/lib/python3.14/site-packages/feedparser/api.py", line 216, in parse
-    data = _open_resource(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, result)
-File "/home/adminuser/venv/lib/python3.14/site-packages/feedparser/api.py", line 115, in _open_resource
-    return http.get(url_file_stream_or_string, etag, modified, agent, referrer, handlers, request_headers, result)
-           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-File "/home/adminuser/venv/lib/python3.14/site-packages/feedparser/http.py", line 171, in get
-    f = opener.open(request)
-File "/usr/local/lib/python3.14/urllib/request.py", line 487, in open
-    response = self._open(req, data)
-File "/usr/local/lib/python3.14/urllib/request.py", line 504, in _open
-    result = self._call_chain(self.handle_open, protocol, protocol +
-                              '_open', req)
-File "/usr/local/lib/python3.14/urllib/request.py", line 464, in _call_chain
-    result = func(*args)
-File "/usr/local/lib/python3.14/urllib/request.py", line 1381, in https_open
-    return self.do_open(http.client.HTTPSConnection, req,
-           ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                        context=self._context)
-                        ^^^^^^^^^^^^^^^^^^^^^^
-File "/usr/local/lib/python3.14/urllib/request.py", line 1303, in do_open
-    h = http_class(host, timeout=req.timeout, **http_conn_args)
-File "/usr/local/lib/python3.14/http/client.py", line 1510, in __init__
-    super(HTTPSConnection, self).__init__(host, port, timeout,
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
-                                          source_address,
-                                          ^^^^^^^^^^^^^^^
-                                          blocksize=blocksize)
-                                          ^^^^^^^^^^^^^^^^^^^^
-File "/usr/local/lib/python3.14/http/client.py", line 921, in __init__
-    (self.host, self.port) = self._get_hostport(host, port)
-                             ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
-File "/usr/local/lib/python3.14/http/client.py", line 976, in _get_hostport
-    raise InvalidURL("nonnumeric port: '%s'" % host[i+1:])
+import streamlit as st
+import feedparser
+import urllib.parse
+import urllib.request
+import ssl
+
+if not hasattr(ssl, '_create_unverified_context'):
+    ssl._create_default_https_context = ssl._create_unverified_context
+
+st.set_page_config(page_title="Luxury Industry Scanner", layout="wide")
+st.title("💎 Luxury Industry Intelligence Briefing")
+st.write("Live data aggregation for luxury sectors.")
+
+# --- THE HOOK: SELECT MULTIPLE LUXURY SECTORS ---
+luxury_topics = st.multiselect(
+    "Select the luxury sectors you want to scan today:",
+    options=[
+        "Luxury Fashion & Goods",
+        "Haute Horlogerie & Jewelry",
+        "Premium Automotive & Yachts",
+        "Luxury Hospitality & Travel",
+        "High-End Real Estate",
+        "Luxury Consumer Trends"
+    ],
+    default=["Luxury Fashion & Goods", "Haute Horlogerie & Jewelry"]
+)
+
+custom_brand = st.text_input("Or scan a specific luxury brand or competitor (e.g., LVMH, Rolex):")
+
+scan_list = list(luxury_topics)
+if custom_brand:
+    scan_list.append(custom_brand)
+
+# --- THE SCANNER ENGINE ---
+if not scan_list:
+    st.info("Please select at least one luxury topic or type a brand name above to start scanning.")
+else:
+    for topic in scan_list:
+        st.header(f"📡 Live Stream: {topic}")
+        
+        encoded_term = urllib.parse.quote_plus(topic)
+        google_news_url = f"https://google.com{encoded_term}&hl=en-US&gl=US&ceid=US:en"
+        
+        try:
+            req = urllib.request.Request(
+                google_news_url, 
+                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                raw_xml_data = response.read()
+            
+            feed = feedparser.parse(raw_xml_data)
+            
+            if not feed.entries:
+                st.info(f"No recent news found for '{topic}'.")
+            else:
+                for entry in feed.entries[:5]:
+                    title = entry.get('title', 'No Title')
+                    link = entry.get('link', '#')
+                    published = entry.get('published', 'Date unknown')
+                    source = entry.get('source', {}).get('text', 'Unknown Source')
+                    
+                    st.markdown(f"### **[{title}]({link})**")
+                    st.markdown(f"📰 *Source: {source}* | 🕒 *Published: {published}*")
+        
+        except Exception as e:
+            st.error(f"Could not reach data stream for '{topic}'. The server might be busy. Please try refreshing.")
+        
+        st.markdown("---")
