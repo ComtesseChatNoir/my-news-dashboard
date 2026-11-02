@@ -39,14 +39,15 @@ else:
         st.header(f"📡 Live Stream: {topic}")
         
         encoded_term = urllib.parse.quote_plus(topic)
-        google_news_url = f"https://google.com{encoded_term}&hl=en-US&gl=US&ceid=US:en"
+        # FIX: Swapped to the direct classic feed path to bypass modern cloud scraping blocks
+        google_news_url = f"https://google.com{encoded_term}/{encoded_term}?hl=en-US&gl=US&ceid=US:en"
         
         try:
             req = urllib.request.Request(
                 google_news_url, 
-                headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+                headers={'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'}
             )
-            with urllib.request.urlopen(req, timeout=10) as response:
+            with urllib.request.urlopen(req, timeout=15) as response:
                 raw_xml_data = response.read()
             
             feed = feedparser.parse(raw_xml_data)
